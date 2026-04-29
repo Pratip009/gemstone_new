@@ -32,7 +32,7 @@ const UserSchema = new Schema<IUser>(
       type: String,
       required: [true, 'Password is required'],
       minlength: [6, 'Password must be at least 6 characters'],
-      select: false, // Never return password by default
+      select: false,
     },
     role: {
       type: String,
@@ -51,23 +51,26 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-// Hash password before saving
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
-// Instance method
 UserSchema.methods.comparePassword = async function (
   candidatePassword: string
 ): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Indexes
 UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ role: 1 });
 
-const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
+const User = (() => {
+  if (mongoose.models && mongoose.models.User) {
+    return mongoose.models.User as mongoose.Model<IUser>;
+  }
+  return mongoose.model<IUser>('User', UserSchema);
+})();
+
 export default User;

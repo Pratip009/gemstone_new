@@ -34,6 +34,12 @@ const CategorySchema = new Schema<ICategory>(
 CategorySchema.index({ slug: 1 }, { unique: true });
 CategorySchema.index({ isActive: 1 });
 
-const Category =
-  mongoose.models.Category || mongoose.model<ICategory>('Category', CategorySchema);
+// ✅ Safe for Next.js hot-reload: checks global registry before registering
+const Category = (() => {
+  if (mongoose.models && mongoose.models.Category) {
+    return mongoose.models.Category as mongoose.Model<ICategory>;
+  }
+  return mongoose.model<ICategory>('Category', CategorySchema);
+})();
+
 export default Category;

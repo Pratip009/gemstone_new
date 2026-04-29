@@ -1,12 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,7 +18,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(form.email, form.password);
-      router.push('/products');
+      // ✅ Redirect back to the page they came from (e.g. /cart)
+      const redirect = searchParams.get('redirect') || '/products';
+      router.push(redirect);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

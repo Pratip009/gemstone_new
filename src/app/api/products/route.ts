@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
+import '@/lib/registerModels';
 import { listProducts, getProductFacets } from '@/services/product.service';
 import { errorResponse } from '@/lib/api-response';
 import { ProductFilterParams } from '@/services/productFilter.service';

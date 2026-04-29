@@ -1,12 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function SignupPage() {
   const { signup } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,7 +18,9 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await signup(form.name, form.email, form.password);
-      router.push('/products');
+      // ✅ Redirect back to original page after signup
+      const redirect = searchParams.get('redirect') || '/products';
+      router.push(redirect);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed');
     } finally {
@@ -31,7 +34,9 @@ export default function SignupPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {(['name', 'email', 'password'] as const).map((field) => (
           <div key={field}>
-            <label className="label">{field.charAt(0).toUpperCase() + field.slice(1)}</label>
+            <label className="label">
+              {field.charAt(0).toUpperCase() + field.slice(1)}
+            </label>
             <input
               type={field === 'email' ? 'email' : field === 'password' ? 'password' : 'text'}
               className="input"

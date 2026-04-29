@@ -7,17 +7,24 @@ export function useApi() {
 
   const apiFetch = useCallback(
     async (url: string, options: RequestInit = {}) => {
+      // ✅ Fallback to localStorage in case React state hasn't hydrated yet
+      const activeToken = token || localStorage.getItem('auth_token');
+
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
         ...(options.headers || {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(activeToken ? { Authorization: `Bearer ${activeToken}` } : {}),
       };
 
       const res = await fetch(url, { ...options, headers });
 
       if (res.status === 401) {
-        logout();
-        throw new Error('Session expired. Please login again.');
+        // ✅ Only logout if token actually exists — avoids false logouts
+        if (activeToken) {
+          logout();
+          throw new Error('Session expired. Please log in again.');
+        }
+        throw new Error('Authentication required. Please log in.');
       }
 
       const data = await res.json();

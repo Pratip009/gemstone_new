@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const MONGODB_URI = process.env.MONGODB_URI!;
 
 if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable');
+  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
 }
 
 interface MongooseCache {
@@ -16,35 +16,45 @@ declare global {
   var mongooseCache: MongooseCache;
 }
 
-let cached: MongooseCache = global.mongooseCache;
-
-if (!cached) {
-  cached = global.mongooseCache = { conn: null, promise: null };
-}
+const cached: MongooseCache = global.mongooseCache ?? { conn: null, promise: null };
+global.mongooseCache = cached;
 
 export async function connectDB(): Promise<typeof mongoose> {
+  // Return existing connection immediately
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
+    const opts: mongoose.ConnectOptions = {
+      bufferCommands: true,  // ← FIXED: was false, which caused the crash
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((m) => {
-      console.log('✅ MongoDB connected');
-      return m;
-    });
+    cached.promise = mongoose
+      .connect(MONGODB_URI, opts)
+      .then((m) => {
+        console.log('✅ MongoDB connected');
+        return m;
+      })
+      .catch((err) => {
+        cached.promise = null; // reset so next call retries
+        console.error('❌ MongoDB connection error:', err);
+        throw err;
+      });
   }
 
-  try {
-    cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
-  }
-
+  cached.conn = await cached.promise;
   return cached.conn;
 }
+
+export async function disconnectDB(): Promise<void> {
+  if (cached.conn) {
+    await mongoose.disconnect();
+    cached.conn = null;
+    cached.promise = null;
+    console.log('🔌 MongoDB disconnected');
+  }
+}
+
+export default connectDB;

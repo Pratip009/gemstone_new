@@ -31,7 +31,7 @@ export interface IProduct extends Document {
   subcategory?: mongoose.Types.ObjectId;
   price: number;
   shape: Shape;
-  size: number;           // carat weight
+  size: number;
   color: Color;
   clarity: Clarity;
   certification?: Certification;
@@ -113,15 +113,12 @@ const ProductSchema = new Schema<IProduct>(
   },
   {
     timestamps: true,
-    // Return plain objects faster (for .lean() calls)
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
   }
 );
 
-// ─── Indexes (CRITICAL for 100k+ dataset performance) ────────────────────────
-
-// Single-field indexes for filtering
+// ─── Indexes ──────────────────────────────────────────────────────────────────
 ProductSchema.index({ shape: 1 });
 ProductSchema.index({ color: 1 });
 ProductSchema.index({ clarity: 1 });
@@ -130,28 +127,20 @@ ProductSchema.index({ size: 1 });
 ProductSchema.index({ isActive: 1 });
 ProductSchema.index({ stock: 1 });
 ProductSchema.index({ createdAt: -1 });
-
-// Category + Subcategory compound (most common lookup)
 ProductSchema.index({ category: 1, subcategory: 1 });
 ProductSchema.index({ category: 1, isActive: 1 });
-
-// Compound indexes for common filter combinations
-// Shape + Color + Clarity (the "3Cs + shape" query)
 ProductSchema.index({ shape: 1, color: 1, clarity: 1 });
-
-// Price range with category (browse by category + budget)
 ProductSchema.index({ category: 1, price: 1 });
-
-// Size range with shape (common: "round diamonds 1-2 carat")
 ProductSchema.index({ shape: 1, size: 1 });
-
-// Full filter compound: category + shape + color + clarity + price
-// Covers the most complex filter query efficiently
 ProductSchema.index({ category: 1, shape: 1, color: 1, clarity: 1, price: 1 });
-
-// Text search index
 ProductSchema.index({ name: 'text', description: 'text' });
 
-const Product =
-  mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
+// ─── Model (safe for Next.js hot-reload) ─────────────────────────────────────
+const Product = (() => {
+  if (mongoose.models && mongoose.models.Product) {
+    return mongoose.models.Product as mongoose.Model<IProduct>;
+  }
+  return mongoose.model<IProduct>('Product', ProductSchema);
+})();
+
 export default Product;

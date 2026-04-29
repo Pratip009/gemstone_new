@@ -31,8 +31,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedToken && storedUser) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
-      // Also set cookie for middleware
-      document.cookie = `auth_token=${storedToken}; path=/; max-age=604800`;
     }
     setLoading(false);
   }, []);
@@ -40,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const saveAuth = (token: string, user: User) => {
     localStorage.setItem('auth_token', token);
     localStorage.setItem('auth_user', JSON.stringify(user));
-    document.cookie = `auth_token=${token}; path=/; max-age=604800`;
+    // ✅ Cookie is now set by the server — no need to set it here
     setToken(token);
     setUser(user);
   };
@@ -70,14 +68,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
-    document.cookie = 'auth_token=; path=/; max-age=0';
+    // ✅ Clear the server-set cookie
+    document.cookie = 'auth_token=; path=/; max-age=0; SameSite=lax';
     setToken(null);
     setUser(null);
   }, []);
 
   return (
     <AuthContext.Provider value={{
-      user, token, login, signup, logout,
+      user,
+      token,
+      login,
+      signup,
+      logout,
       isAdmin: user?.role === 'admin',
       loading,
     }}>

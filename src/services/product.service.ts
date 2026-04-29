@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Product, { IProduct } from '@/models/Product';
+import '@/lib/registerModels';
 import { buildProductFilterQuery, buildFacetsPipeline, ProductFilterParams } from './productFilter.service';
 
 export async function listProducts(params: ProductFilterParams) {
@@ -25,7 +26,6 @@ export async function getProductFacets(params: ProductFilterParams) {
     subcategory: params.subcategory,
   });
 
-  // Cast to any[] to avoid Mongoose PipelineStage union type strictness
   const pipeline = buildFacetsPipeline(query) as Parameters<typeof Product.aggregate>[0];
   const [result] = await Product.aggregate(pipeline);
   return result;
@@ -75,7 +75,7 @@ export async function bulkCreateProducts(
 
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
-    const validDocs: Record<string, unknown>[] = [];
+    const validDocs: object[] = [];                          // ← fixed: was Record<string, unknown>[]
 
     for (let j = 0; j < chunk.length; j++) {
       const rowIndex = i + j + 2;
@@ -110,7 +110,7 @@ export async function bulkCreateProducts(
             result.errors.push({
               row: i + (we.index || 0) + 2,
               error: we.errmsg || 'Insert failed',
-              data: validDocs[we.index || 0] || {},
+              data: (validDocs[we.index || 0] as Record<string, unknown>) || {}, // ← fixed cast
             });
           }
         } else {

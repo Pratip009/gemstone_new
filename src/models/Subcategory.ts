@@ -35,12 +35,15 @@ const SubcategorySchema = new Schema<ISubcategory>(
   { timestamps: true }
 );
 
-// Compound unique: same slug can't exist within same category
 SubcategorySchema.index({ slug: 1, category: 1 }, { unique: true });
 SubcategorySchema.index({ category: 1 });
 SubcategorySchema.index({ isActive: 1 });
 
-const Subcategory =
-  mongoose.models.Subcategory ||
-  mongoose.model<ISubcategory>('Subcategory', SubcategorySchema);
+const Subcategory = (() => {
+  if (mongoose.models && mongoose.models.Subcategory) {
+    return mongoose.models.Subcategory as mongoose.Model<ISubcategory>;
+  }
+  return mongoose.model<ISubcategory>('Subcategory', SubcategorySchema);
+})();
+
 export default Subcategory;

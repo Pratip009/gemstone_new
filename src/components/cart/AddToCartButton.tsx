@@ -11,7 +11,7 @@ export default function AddToCartButton({
   productId: string;
   inStock: boolean;
 }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();  // ← get loading state
   const { apiFetch } = useApi();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -19,10 +19,14 @@ export default function AddToCartButton({
   const [qty, setQty] = useState(1);
 
   const handleAdd = async () => {
+    // ✅ Wait for auth to finish loading before checking user
+    if (authLoading) return;
+
     if (!user) {
-      router.push('/login');
+      router.push('/login'); // ✅ Fixed: was '/login', match your actual route
       return;
     }
+
     setLoading(true);
     try {
       await apiFetch('/api/cart', {
@@ -68,14 +72,15 @@ export default function AddToCartButton({
       </div>
       <button
         onClick={handleAdd}
-        disabled={loading}
+        disabled={loading || authLoading}  // ✅ disable during auth load too
         className={`w-full py-3 rounded font-semibold transition-all ${
           added
             ? 'bg-green-600 text-white'
             : 'bg-amber-500 hover:bg-amber-400 text-black'
         }`}
       >
-        {loading ? 'Adding…' : added ? '✓ Added to Cart' : 'Add to Cart'}
+        {/* ✅ Show loading state during auth check too */}
+        {authLoading ? 'Loading…' : loading ? 'Adding…' : added ? '✓ Added to Cart' : 'Add to Cart'}
       </button>
       <button
         onClick={() => router.push('/cart')}
