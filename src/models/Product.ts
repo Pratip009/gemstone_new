@@ -1,6 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-// ─── Enums ────────────────────────────────────────────────────────────────────
 export const SHAPES = [
   'round', 'oval', 'princess', 'cushion', 'emerald',
   'pear', 'marquise', 'radiant', 'asscher', 'heart', 'other',
@@ -23,18 +22,17 @@ export type Color = (typeof COLORS)[number];
 export type Clarity = (typeof CLARITIES)[number];
 export type Certification = (typeof CERTIFICATIONS)[number];
 
-// ─── Interface ────────────────────────────────────────────────────────────────
 export interface IProduct extends Document {
   _id: mongoose.Types.ObjectId;
   name: string;
   category: mongoose.Types.ObjectId;
   subcategory?: mongoose.Types.ObjectId;
   price: number;
-  shape: Shape;
+  shape: Shape[];
   size: number;
-  color: Color;
-  clarity: Clarity;
-  certification?: Certification;
+  color: Color[];
+  clarity: Clarity[];
+  certification?: Certification[];
   images: string[];
   stock: number;
   isActive: boolean;
@@ -43,7 +41,6 @@ export interface IProduct extends Document {
   updatedAt: Date;
 }
 
-// ─── Schema ───────────────────────────────────────────────────────────────────
 const ProductSchema = new Schema<IProduct>(
   {
     name: {
@@ -67,7 +64,7 @@ const ProductSchema = new Schema<IProduct>(
       min: [0, 'Price cannot be negative'],
     },
     shape: {
-      type: String,
+      type: [String],
       required: [true, 'Shape is required'],
       enum: { values: SHAPES, message: 'Invalid shape: {VALUE}' },
     },
@@ -77,19 +74,19 @@ const ProductSchema = new Schema<IProduct>(
       min: [0.01, 'Size must be at least 0.01 carat'],
     },
     color: {
-      type: String,
+      type: [String],
       required: [true, 'Color is required'],
       enum: { values: COLORS, message: 'Invalid color: {VALUE}' },
     },
     clarity: {
-      type: String,
+      type: [String],
       required: [true, 'Clarity is required'],
       enum: { values: CLARITIES, message: 'Invalid clarity: {VALUE}' },
     },
     certification: {
-      type: String,
+      type: [String],
       enum: { values: CERTIFICATIONS, message: 'Invalid certification: {VALUE}' },
-      default: 'none',
+      default: [],
     },
     images: {
       type: [String],
@@ -118,7 +115,6 @@ const ProductSchema = new Schema<IProduct>(
   }
 );
 
-// ─── Indexes ──────────────────────────────────────────────────────────────────
 ProductSchema.index({ shape: 1 });
 ProductSchema.index({ color: 1 });
 ProductSchema.index({ clarity: 1 });
@@ -129,13 +125,10 @@ ProductSchema.index({ stock: 1 });
 ProductSchema.index({ createdAt: -1 });
 ProductSchema.index({ category: 1, subcategory: 1 });
 ProductSchema.index({ category: 1, isActive: 1 });
-ProductSchema.index({ shape: 1, color: 1, clarity: 1 });
 ProductSchema.index({ category: 1, price: 1 });
 ProductSchema.index({ shape: 1, size: 1 });
-ProductSchema.index({ category: 1, shape: 1, color: 1, clarity: 1, price: 1 });
 ProductSchema.index({ name: 'text', description: 'text' });
 
-// ─── Model (safe for Next.js hot-reload) ─────────────────────────────────────
 const Product = (() => {
   if (mongoose.models && mongoose.models.Product) {
     return mongoose.models.Product as mongoose.Model<IProduct>;

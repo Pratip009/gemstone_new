@@ -3,7 +3,6 @@ import { connectDB } from '@/lib/db';
 import { listCategories, listSubcategories } from '@/services/category.service';
 import { successResponse, errorResponse } from '@/lib/api-response';
 
-// GET /api/categories — public, for shop navigation
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
@@ -12,14 +11,18 @@ export async function GET(req: NextRequest) {
     const categories = await listCategories();
 
     if (withSubs) {
-      // Attach subcategories to each category
       const subcategories = await listSubcategories();
-      const enriched = categories.map((cat) => ({
-        ...cat,
-        subcategories: subcategories.filter(
-          (s) => s.category?.toString() === (cat as Record<string, unknown>)._id?.toString()
-        ),
-      }));
+      const enriched = categories.map((cat) => {
+        const catId = (cat as Record<string, unknown>)._id?.toString();
+        return {
+          ...cat,
+          subcategories: subcategories.filter(
+            // .populate() replaced category ID with { _id, name, slug } object
+            // so we must use ._id to compare, not .toString() directly
+            (s) => (s.category as any)?._id?.toString() === catId
+          ),
+        };
+      });
       return successResponse(enriched);
     }
 

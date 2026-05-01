@@ -1,50 +1,69 @@
-import { NextRequest } from 'next/server';
-import { connectDB } from '@/lib/db';
-import '@/lib/registerModels';
-import { listProducts, getProductFacets } from '@/services/product.service';
-import { errorResponse } from '@/lib/api-response';
-import { ProductFilterParams } from '@/services/productFilter.service';
+import { NextRequest } from "next/server";
+import { connectDB } from "@/lib/db";
+import {
+  createProduct,
+  listProducts,
+  updateProduct,
+  deleteProduct,
+} from "@/services/product.service";
+import { withAdmin } from "@/middleware/auth.middleware";
+import { successResponse, errorResponse } from "@/lib/api-response";
+import { z } from "zod";
+import { SHAPES, COLORS, CLARITIES, CERTIFICATIONS } from "@/models/Product";
 
-export async function GET(req: NextRequest) {
+const productSchema = z.object({
+  name: z.string().min(2).max(200),
+  category: z.string().min(1),
+  subcategory: z
+    .string()
+    .optional()
+    .transform((val) => (val === "" ? undefined : val)),
+  price: z.number().positive(),
+  shape: z.array(z.enum(SHAPES)).min(1),
+  size: z.number().positive(),
+  color: z.array(z.enum(COLORS)).min(1),
+  clarity: z.array(z.enum(CLARITIES)).min(1),
+  certification: z.array(z.enum(CERTIFICATIONS)).optional().default([]),
+  images: z.array(z.string().min(1)).default([]),
+  stock: z.number().int().min(0),
+  description: z.string().max(2000).optional(),
+  isActive: z.boolean().default(true),
+});
+
+export const POST = withAdmin(async (req) => {
+  try {
+    await connectDB();
+    const body = await req.json();
+    console.log("ROUTE.TS VERSION: ARRAYS ONLY");
+    console.log("BODY:", JSON.stringify(body, null, 2));
+
+    const parsed = productSchema.safeParse(body);
+    if (!parsed.success) {
+      console.error("ZOD ERRORS:", JSON.stringify(parsed.error.flatten(), null, 2));
+      return errorResponse("Validation failed", 400, parsed.error.flatten().fieldErrors);
+    }
+
+    const product = await createProduct(parsed.data as never);
+    return successResponse(product, 201);
+  } catch (err) {
+    console.error("[POST /api/admin/products]", err);
+    return errorResponse(
+      err instanceof Error ? err.message : "Failed to create product",
+      500,
+    );
+  }
+});
+
+export const GET = withAdmin(async (req) => {
   try {
     await connectDB();
     const sp = req.nextUrl.searchParams;
+    const page = Number(sp.get("page") || 1);
+    const limit = Number(sp.get("limit") || 20);
 
-    const params: ProductFilterParams = {
-      category:      sp.get('category')      || undefined,
-      subcategory:   sp.get('subcategory')   || undefined,
-      shape:         sp.get('shape')         || undefined,
-      color:         sp.get('color')         || undefined,
-      clarity:       sp.get('clarity')       || undefined,
-      certification: sp.get('certification') || undefined,
-      priceMin:      sp.get('priceMin')      || undefined,
-      priceMax:      sp.get('priceMax')      || undefined,
-      sizeMin:       sp.get('sizeMin')       || undefined,
-      sizeMax:       sp.get('sizeMax')       || undefined,
-      inStock:       sp.get('inStock')       || undefined,
-      q:             sp.get('q')             || undefined,
-      sortBy:       (sp.get('sortBy') as ProductFilterParams['sortBy']) || 'newest',
-      page:          sp.get('page')          || 1,
-      limit:         sp.get('limit')         || 20,
-    };
-
-    const includeFacets = sp.get('facets') === 'true';
-
-    const [{ products, total, page, limit }, facets] = await Promise.all([
-      listProducts(params),
-      includeFacets ? getProductFacets(params) : Promise.resolve(null),
-    ]);
-
-    const totalPages = Math.ceil(total / limit);
-
-    return Response.json({
-      success: true,
-      data: products,
-      pagination: { total, page, limit, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
-      ...(facets ? { facets } : {}),
-    });
+    const { products, total } = await listProducts({ page, limit });
+    return Response.json({ success: true, data: products, total, page, limit });
   } catch (err) {
-    console.error('[GET /api/products]', err);
-    return errorResponse('Failed to fetch products', 500);
+    return errorResponse("Failed to fetch products", 500);
   }
-}
+});

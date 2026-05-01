@@ -7,17 +7,38 @@ type ProductDoc = {
   _id: unknown;
   name: string;
   price: number;
-  shape: string;
+  shape: string | string[];
   size: number;
-  color: string;
-  clarity: string;
-  certification?: string;
+  color: string | string[];
+  clarity: string | string[];
+  certification?: string | string[];
   images: string[];
   stock: number;
   description?: string;
   category?: { name: string };
   subcategory?: { name: string };
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function first(val: string | string[]): string {
+  return Array.isArray(val) ? (val[0] ?? '') : (val ?? '');
+}
+
+function display(val: string | string[]): string {
+  return Array.isArray(val) ? val.join(', ') : (val ?? '');
+}
+
+function capitalize(val: string | string[]): string {
+  const s = first(val);
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+
+function certDisplay(val?: string | string[]): string {
+  if (!val) return '—';
+  const arr = Array.isArray(val) ? val : [val];
+  const filtered = arr.filter((c) => c && c.toLowerCase() !== 'none');
+  return filtered.length > 0 ? filtered.join(', ') : '—';
+}
 
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
   await connectDB();
@@ -26,14 +47,25 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
 
   const p = raw as unknown as ProductDoc;
 
+  const certLabel = certDisplay(p.certification);
+
   const specs = [
-    { label: 'Shape',         value: p.shape.charAt(0).toUpperCase() + p.shape.slice(1) },
+    { label: 'Shape',         value: capitalize(p.shape) },
     { label: 'Carat Weight',  value: `${p.size} ct` },
-    { label: 'Color Grade',   value: p.color },
-    { label: 'Clarity',       value: p.clarity },
-    { label: 'Certification', value: p.certification && p.certification !== 'none' ? p.certification : '—' },
+    { label: 'Color Grade',   value: display(p.color) },
+    { label: 'Clarity',       value: display(p.clarity) },
+    { label: 'Certification', value: certLabel },
     { label: 'Availability',  value: `${p.stock} in stock`, highlight: p.stock > 0 },
   ];
+
+  // For the subtitle line under the product name
+  const colorDisplay   = display(p.color);
+  const clarityDisplay = display(p.clarity);
+  const shapeLabel     = capitalize(p.shape);
+
+  // For the certification badge on the image
+  const certBadge = certDisplay(p.certification);
+  const showCertBadge = certBadge !== '—';
 
   return (
     <>
@@ -78,9 +110,9 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                   </div>
                 )}
 
-                {p.certification && p.certification !== 'none' && (
+                {showCertBadge && (
                   <div className="absolute top-3 left-3 bg-[#faf9f6] border border-[#c8b87a] text-[#8a6e2a] text-[9px] font-medium tracking-[0.18em] uppercase px-[10px] py-[4px]">
-                    {p.certification} Certified
+                    {certBadge} Certified
                   </div>
                 )}
 
@@ -128,7 +160,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
                 className="text-[15px] italic text-[#a09a90] mb-6"
                 style={{ fontFamily: "'Cormorant Garamond', serif" }}
               >
-                {p.color} Color · {p.clarity} Clarity · {p.size} ct
+                {colorDisplay} Color · {clarityDisplay} Clarity · {p.size} ct
               </p>
 
               {/* Price */}

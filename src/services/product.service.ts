@@ -1,10 +1,17 @@
 import mongoose from 'mongoose';
 import Product, { IProduct } from '@/models/Product';
 import '@/lib/registerModels';
-import { buildProductFilterQuery, buildFacetsPipeline, ProductFilterParams } from './productFilter.service';
+import {
+  buildProductFilterQuery,
+  buildFacetsPipeline,
+  resolveSlugFilters,
+  ProductFilterParams,
+} from './productFilter.service';
 
 export async function listProducts(params: ProductFilterParams) {
-  const { query, sort, page, limit, skip } = buildProductFilterQuery(params);
+  // Resolve category/subcategory slugs → ObjectIds before building the query
+  const resolved = await resolveSlugFilters(params);
+  const { query, sort, page, limit, skip } = buildProductFilterQuery(resolved);
 
   const [products, total] = await Promise.all([
     Product.find(query)
@@ -21,10 +28,13 @@ export async function listProducts(params: ProductFilterParams) {
 }
 
 export async function getProductFacets(params: ProductFilterParams) {
-  const { query } = buildProductFilterQuery({
+  // Also resolve slugs for facets so counts are scoped correctly
+  const resolved = await resolveSlugFilters({
     category: params.category,
     subcategory: params.subcategory,
   });
+
+  const { query } = buildProductFilterQuery(resolved);
 
   const pipeline = buildFacetsPipeline(query) as Parameters<typeof Product.aggregate>[0];
   const [result] = await Product.aggregate(pipeline);
@@ -41,7 +51,9 @@ export async function getProductById(id: string) {
 }
 
 export async function createProduct(data: Partial<IProduct>) {
+  console.log("CREATE PRODUCT DATA:", JSON.stringify(data, null, 2));
   const product = new Product(data);
+  console.log("MONGOOSE VALIDATION:", product.validateSync());
   await product.save();
   return product.toObject();
 }
@@ -75,7 +87,7 @@ export async function bulkCreateProducts(
 
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
     const chunk = rows.slice(i, i + CHUNK_SIZE);
-    const validDocs: object[] = [];                          // ← fixed: was Record<string, unknown>[]
+    const validDocs: object[] = [];
 
     for (let j = 0; j < chunk.length; j++) {
       const rowIndex = i + j + 2;
@@ -110,7 +122,7 @@ export async function bulkCreateProducts(
             result.errors.push({
               row: i + (we.index || 0) + 2,
               error: we.errmsg || 'Insert failed',
-              data: (validDocs[we.index || 0] as Record<string, unknown>) || {}, // ← fixed cast
+              data: (validDocs[we.index || 0] as Record<string, unknown>) || {},
             });
           }
         } else {

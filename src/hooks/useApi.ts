@@ -7,7 +7,6 @@ export function useApi() {
 
   const apiFetch = useCallback(
     async (url: string, options: RequestInit = {}) => {
-      // ✅ Fallback to localStorage in case React state hasn't hydrated yet
       const activeToken = token || localStorage.getItem('auth_token');
 
       const headers: HeadersInit = {
@@ -19,7 +18,6 @@ export function useApi() {
       const res = await fetch(url, { ...options, headers });
 
       if (res.status === 401) {
-        // ✅ Only logout if token actually exists — avoids false logouts
         if (activeToken) {
           logout();
           throw new Error('Session expired. Please log in again.');

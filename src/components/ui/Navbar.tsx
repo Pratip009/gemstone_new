@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import MegaMenu from '@/components/ui/MegaMenu';
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth();
@@ -16,10 +17,8 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close menu on route change
   useEffect(() => { setMenuOpen(false); }, []);
 
-  // Prevent body scroll when menu open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -47,7 +46,7 @@ export default function Navbar() {
           boxShadow: scrolled ? '0 4px 30px rgba(0,0,0,0.06)' : 'none',
         }}
       >
-        {/* Top announcement bar */}
+        {/* Announcement bar */}
         <div
           className="text-center py-1.5 hidden sm:block"
           style={{
@@ -77,9 +76,9 @@ export default function Navbar() {
 
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/products" className="uppercase tracking-widest transition-opacity hover:opacity-60" style={navLinkStyle}>
-              Collection
-            </Link>
+
+            {/* ── MegaMenu replaces plain Collection link ── */}
+            <MegaMenu />
 
             {user ? (
               <>
@@ -141,28 +140,12 @@ export default function Navbar() {
               className="flex flex-col justify-center items-center w-8 h-8 gap-1.5 transition-opacity hover:opacity-60"
               aria-label="Toggle menu"
             >
-              <span
-                className="block h-px w-6 transition-all duration-300 origin-center"
-                style={{
-                  background: 'var(--text)',
-                  transform: menuOpen ? 'translateY(4px) rotate(45deg)' : 'none',
-                }}
-              />
-              <span
-                className="block h-px w-6 transition-all duration-300"
-                style={{
-                  background: 'var(--text)',
-                  opacity: menuOpen ? 0 : 1,
-                  transform: menuOpen ? 'scaleX(0)' : 'scaleX(1)',
-                }}
-              />
-              <span
-                className="block h-px w-6 transition-all duration-300 origin-center"
-                style={{
-                  background: 'var(--text)',
-                  transform: menuOpen ? 'translateY(-4px) rotate(-45deg)' : 'none',
-                }}
-              />
+              <span className="block h-px w-6 transition-all duration-300 origin-center"
+                style={{ background: 'var(--text)', transform: menuOpen ? 'translateY(4px) rotate(45deg)' : 'none' }} />
+              <span className="block h-px w-6 transition-all duration-300"
+                style={{ background: 'var(--text)', opacity: menuOpen ? 0 : 1, transform: menuOpen ? 'scaleX(0)' : 'scaleX(1)' }} />
+              <span className="block h-px w-6 transition-all duration-300 origin-center"
+                style={{ background: 'var(--text)', transform: menuOpen ? 'translateY(-4px) rotate(-45deg)' : 'none' }} />
             </button>
           </div>
         </div>
@@ -175,47 +158,27 @@ export default function Navbar() {
           background: 'var(--surface)',
           opacity: menuOpen ? 1 : 0,
           pointerEvents: menuOpen ? 'auto' : 'none',
-          top: '56px', // height of navbar
+          top: '56px',
         }}
       >
         <div className="flex flex-col h-full px-6 py-10 gap-1">
-
-          {/* Decorative top line */}
           <div className="gold-divider mb-10" style={{ marginLeft: 0, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
 
-          {/* Mobile nav links */}
-          <MobileLink href="/products" onClick={() => setMenuOpen(false)}>
-            Collection
-          </MobileLink>
+          <MobileLink href="/products" onClick={() => setMenuOpen(false)}>Collection</MobileLink>
 
           {user ? (
             <>
-              <MobileLink href="/cart" onClick={() => setMenuOpen(false)}>
-                Cart
-              </MobileLink>
-              <MobileLink href="/orders" onClick={() => setMenuOpen(false)}>
-                Orders
-              </MobileLink>
+              <MobileLink href="/cart" onClick={() => setMenuOpen(false)}>Cart</MobileLink>
+              <MobileLink href="/orders" onClick={() => setMenuOpen(false)}>Orders</MobileLink>
               {isAdmin && (
-                <MobileLink href="/admin" onClick={() => setMenuOpen(false)} gold>
-                  Admin
-                </MobileLink>
+                <MobileLink href="/admin" onClick={() => setMenuOpen(false)} gold>Admin</MobileLink>
               )}
-
-              {/* Divider */}
               <div className="my-6" style={{ borderTop: '1px solid var(--border)' }} />
-
-              {/* User info */}
               <div className="mb-4">
-                <p style={{ color: 'var(--muted)', fontSize: '0.65rem', letterSpacing: '0.15em' }} className="uppercase mb-1">
-                  Signed in as
-                </p>
-                <p style={{ color: 'var(--text)', fontSize: '0.9rem', fontFamily: 'Cormorant Garamond, serif' }}>
-                  {user.name}
-                </p>
+                <p style={{ color: 'var(--muted)', fontSize: '0.65rem', letterSpacing: '0.15em' }} className="uppercase mb-1">Signed in as</p>
+                <p style={{ color: 'var(--text)', fontSize: '0.9rem', fontFamily: 'Cormorant Garamond, serif' }}>{user.name}</p>
                 <p style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>{user.email}</p>
               </div>
-
               <button
                 onClick={handleLogout}
                 className="uppercase tracking-widest text-left transition-opacity hover:opacity-60 mt-2"
@@ -227,26 +190,19 @@ export default function Navbar() {
           ) : (
             <>
               <div className="my-6" style={{ borderTop: '1px solid var(--border)' }} />
-              <MobileLink href="/login" onClick={() => setMenuOpen(false)}>
-                Login
-              </MobileLink>
+              <MobileLink href="/login" onClick={() => setMenuOpen(false)}>Login</MobileLink>
               <div className="mt-6">
-                <Link
-                  href="/signup"
-                  className="btn-primary w-full text-center"
-                  onClick={() => setMenuOpen(false)}
-                >
+                <Link href="/signup" className="btn-primary w-full text-center" onClick={() => setMenuOpen(false)}>
                   Create Account
                 </Link>
               </div>
             </>
           )}
 
-          {/* Bottom tagline */}
           <div className="mt-auto pb-8">
             <div className="gold-divider mb-6" style={{ marginLeft: 0, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
             <p style={{ color: 'var(--muted)', fontSize: '0.6rem', letterSpacing: '0.2em' }} className="uppercase">
-              Fine Diamonds & Alpha Importss
+              Fine Diamonds & Gemstones
             </p>
           </div>
         </div>
@@ -255,16 +211,8 @@ export default function Navbar() {
   );
 }
 
-function MobileLink({
-  href,
-  onClick,
-  children,
-  gold,
-}: {
-  href: string;
-  onClick: () => void;
-  children: React.ReactNode;
-  gold?: boolean;
+function MobileLink({ href, onClick, children, gold }: {
+  href: string; onClick: () => void; children: React.ReactNode; gold?: boolean;
 }) {
   return (
     <Link

@@ -4,6 +4,7 @@ import { useApi } from '@/hooks/useApi';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, Gem, Package } from 'lucide-react';
 
 interface CartItem {
   product: { _id: string; name: string; images: string[]; price: number; stock: number };
@@ -18,20 +19,202 @@ interface Totals {
   total: number;
 }
 
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+function CartSkeleton() {
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-10 animate-pulse">
+      <div className="h-8 w-48 bg-[#ede9e1] rounded-lg mb-8" />
+      <div className="flex gap-8">
+        <div className="flex-1 space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-white border border-[#ede9e1] rounded-2xl p-5 flex gap-4">
+              <div className="w-20 h-20 bg-[#ede9e1] rounded-xl shrink-0" />
+              <div className="flex-1 space-y-2 py-1">
+                <div className="h-4 bg-[#ede9e1] rounded w-3/4" />
+                <div className="h-4 bg-[#ede9e1] rounded w-1/3" />
+              </div>
+              <div className="w-24 h-8 bg-[#ede9e1] rounded-lg self-center" />
+            </div>
+          ))}
+        </div>
+        <div className="w-72 shrink-0">
+          <div className="bg-white border border-[#ede9e1] rounded-2xl p-6 space-y-4">
+            <div className="h-5 bg-[#ede9e1] rounded w-1/2" />
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-4 bg-[#ede9e1] rounded" />)}
+            <div className="h-11 bg-[#ede9e1] rounded-xl mt-4" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+function EmptyCart() {
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
+      <div
+        className="w-24 h-24 rounded-3xl flex items-center justify-center mb-6"
+        style={{ background: '#faf8f4', border: '1.5px solid #ede9e1' }}
+      >
+        <ShoppingBag size={36} strokeWidth={1.2} style={{ color: '#c9a84c' }} />
+      </div>
+      <h2
+        className="font-['Cormorant_Garamond',serif] text-3xl font-medium mb-2"
+        style={{ color: '#1a1714' }}
+      >
+        Your cart is empty
+      </h2>
+      <p className="text-sm mb-8" style={{ color: '#a09a90' }}>
+        Discover our collection of fine diamonds &amp; gemstones
+      </p>
+      <Link
+        href="/products"
+        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold tracking-wide transition-all hover:opacity-90 active:scale-95"
+        style={{ background: '#1a1714', color: '#f5f0e8' }}
+      >
+        Browse Collection <ArrowRight size={14} strokeWidth={2} />
+      </Link>
+    </div>
+  );
+}
+
+// ─── Cart item card ───────────────────────────────────────────────────────────
+function CartCard({
+  item,
+  onUpdate,
+  onRemove,
+  updating,
+}: {
+  item: CartItem;
+  onUpdate: (id: string, qty: number) => void;
+  onRemove: (id: string) => void;
+  updating: string | null;
+}) {
+  const isUpdating = updating === item.product._id;
+
+  return (
+    <div
+      className="group bg-white border border-[#ede9e1] rounded-2xl p-4 sm:p-5 flex gap-4 items-center transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.07)] hover:-translate-y-0.5"
+      style={{ opacity: isUpdating ? 0.6 : 1 }}
+    >
+      {/* Image */}
+      <div
+        className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
+        style={{ background: '#faf8f4', border: '1px solid #ede9e1', minWidth: '4.5rem', minHeight: '4.5rem' }}
+      >
+        {item.product.images[0] ? (
+          <img
+            src={item.product.images[0]}
+            alt={item.product.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <Gem size={24} strokeWidth={1.2} style={{ color: '#c9a84c' }} />
+        )}
+      </div>
+
+      {/* Name + price */}
+      <div className="flex-1 min-w-0">
+        <p
+          className="text-[0.85rem] font-semibold leading-snug line-clamp-2 mb-1"
+          style={{ color: '#1a1714' }}
+        >
+          {item.product.name}
+        </p>
+        <p
+          className="text-[0.75rem] font-medium"
+          style={{ color: '#c9a84c' }}
+        >
+          ${item.price.toLocaleString()} each
+        </p>
+      </div>
+
+      {/* Qty stepper */}
+      <div
+        className="flex items-center rounded-xl overflow-hidden shrink-0"
+        style={{ border: '1.5px solid #ede9e1', background: '#faf8f4' }}
+      >
+        <button
+          onClick={() => onUpdate(item.product._id, item.quantity - 1)}
+          disabled={isUpdating || item.quantity <= 1}
+          className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[#ede9e1] disabled:opacity-30"
+          style={{ color: '#6b6560' }}
+        >
+          <Minus size={12} strokeWidth={2.5} />
+        </button>
+        <span
+          className="w-8 text-center text-[0.8rem] font-bold"
+          style={{ color: '#1a1714' }}
+        >
+          {item.quantity}
+        </span>
+        <button
+          onClick={() => onUpdate(item.product._id, item.quantity + 1)}
+          disabled={isUpdating || item.quantity >= item.product.stock}
+          className="w-8 h-8 flex items-center justify-center transition-colors hover:bg-[#ede9e1] disabled:opacity-30"
+          style={{ color: '#6b6560' }}
+        >
+          <Plus size={12} strokeWidth={2.5} />
+        </button>
+      </div>
+
+      {/* Line total */}
+      <p
+        className="w-20 text-right text-[0.88rem] font-bold shrink-0 hidden sm:block"
+        style={{ color: '#1a1714' }}
+      >
+        ${(item.price * item.quantity).toLocaleString()}
+      </p>
+
+      {/* Remove */}
+      <button
+        onClick={() => onRemove(item.product._id)}
+        disabled={isUpdating}
+        className="ml-1 w-8 h-8 rounded-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 hover:bg-red-50 disabled:opacity-30"
+        style={{ color: '#d4a0a0' }}
+        title="Remove"
+      >
+        <Trash2 size={13} strokeWidth={2} />
+      </button>
+    </div>
+  );
+}
+
+// ─── Summary row ──────────────────────────────────────────────────────────────
+function SummaryRow({ label, value, bold, accent }: { label: string; value: string; bold?: boolean; accent?: boolean }) {
+  return (
+    <div className={`flex justify-between items-center ${bold ? 'pt-1' : ''}`}>
+      <span
+        className="text-[0.75rem]"
+        style={{ color: bold ? '#1a1714' : '#a09a90', fontWeight: bold ? 700 : 400 }}
+      >
+        {label}
+      </span>
+      <span
+        className="text-[0.82rem] font-bold"
+        style={{ color: accent ? '#c9a84c' : bold ? '#1a1714' : '#6b6560' }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 export default function CartPage() {
   const { apiFetch } = useApi();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+
   const [items, setItems] = useState<CartItem[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState<string | null>(null);
 
-  // ✅ Client-side auth guard — redirect if not logged in
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login?redirect=/cart');
-    }
+    if (!authLoading && !user) router.push('/login?redirect=/cart');
   }, [authLoading, user, router]);
 
   const fetchCart = async () => {
@@ -47,131 +230,150 @@ export default function CartPage() {
   };
 
   useEffect(() => {
-    if (!authLoading && user) {
-      fetchCart();
-    }
-  }, [authLoading, user]);
+    if (!authLoading && user) fetchCart();
+  }, [authLoading, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateQty = async (productId: string, quantity: number) => {
+    setUpdating(productId);
     try {
       await apiFetch('/api/cart', {
         method: 'PUT',
         body: JSON.stringify({ productId, quantity }),
       });
-      fetchCart();
+      await fetchCart();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update quantity');
+    } finally {
+      setUpdating(null);
     }
   };
 
   const remove = async (productId: string) => {
+    setUpdating(productId);
     try {
       await apiFetch(`/api/cart?productId=${productId}`, { method: 'DELETE' });
-      fetchCart();
+      await fetchCart();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to remove item');
+    } finally {
+      setUpdating(null);
     }
   };
 
-  // Show nothing while auth is loading to prevent flash
-  if (authLoading) {
-    return <div className="text-neutral-500 py-20 text-center">Loading…</div>;
-  }
-
-  // Don't render if not logged in (redirect is in progress)
+  if (authLoading || (loading && user)) return <CartSkeleton />;
   if (!user) return null;
-
-  if (loading) {
-    return <div className="text-neutral-500 py-20 text-center">Loading cart…</div>;
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-20">
-        <p className="text-red-400 mb-4">{error}</p>
-        <button onClick={fetchCart} className="btn-primary">Try Again</button>
-      </div>
-    );
-  }
-
-  if (items.length === 0) {
-    return (
-      <div className="text-center py-20">
-        <div className="text-4xl mb-4">🛒</div>
-        <p className="text-neutral-400 mb-4">Your cart is empty.</p>
-        <Link href="/products" className="btn-primary">Browse Products</Link>
-      </div>
-    );
-  }
+  if (error) return (
+    <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+      <p className="text-sm" style={{ color: '#c97a7a' }}>{error}</p>
+      <button
+        onClick={fetchCart}
+        className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+        style={{ background: '#1a1714', color: '#f5f0e8' }}
+      >
+        Try Again
+      </button>
+    </div>
+  );
+  if (items.length === 0) return <EmptyCart />;
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Cart ({items.length} items)</h1>
-      <div className="flex gap-8">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+
+      {/* ── Header ── */}
+      <div className="flex items-end justify-between mb-8">
+        <div>
+          <p className="text-[0.65rem] tracking-[0.25em] uppercase font-semibold mb-1.5" style={{ color: '#c9a84c' }}>
+            ◆ Your Selection
+          </p>
+          <h1
+            className="font-['Cormorant_Garamond',serif] text-[2.2rem] font-medium leading-none"
+            style={{ color: '#1a1714' }}
+          >
+            Shopping Cart
+          </h1>
+        </div>
+        <span
+          className="text-[0.7rem] tracking-wide px-3 py-1.5 rounded-full font-semibold"
+          style={{ background: '#faf8f4', border: '1px solid #ede9e1', color: '#7a736a' }}
+        >
+          {items.length} {items.length === 1 ? 'item' : 'items'}
+        </span>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6">
+
+        {/* ── Items ── */}
         <div className="flex-1 space-y-3">
-          {items.map((item) => (
-            <div key={item.product._id} className="card p-4 flex gap-4 items-center">
-              <div className="w-16 h-16 bg-neutral-800 rounded overflow-hidden shrink-0">
-                {item.product.images[0] ? (
-                  <img src={item.product.images[0]} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl">💎</div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white line-clamp-1">{item.product.name}</p>
-                <p className="text-amber-400 font-bold mt-0.5">${item.price.toLocaleString()}</p>
-              </div>
-              <div className="flex items-center border border-neutral-700 rounded">
-                <button
-                  onClick={() => updateQty(item.product._id, item.quantity - 1)}
-                  className="px-2.5 py-1 text-neutral-400 hover:text-white"
-                >−</button>
-                <span className="px-3 py-1 text-sm border-x border-neutral-700">{item.quantity}</span>
-                <button
-                  onClick={() => updateQty(item.product._id, item.quantity + 1)}
-                  className="px-2.5 py-1 text-neutral-400 hover:text-white"
-                >+</button>
-              </div>
-              <p className="text-white font-bold w-20 text-right">
-                ${(item.price * item.quantity).toLocaleString()}
-              </p>
-              <button
-                onClick={() => remove(item.product._id)}
-                className="text-neutral-600 hover:text-red-400 text-lg ml-2"
-              >×</button>
-            </div>
+          {items.map(item => (
+            <CartCard
+              key={item.product._id}
+              item={item}
+              onUpdate={updateQty}
+              onRemove={remove}
+              updating={updating}
+            />
           ))}
+
+          {/* Continue shopping */}
+          <Link
+            href="/products"
+            className="inline-flex items-center gap-2 text-[0.73rem] font-semibold mt-2 transition-colors"
+            style={{ color: '#a09a90' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#c9a84c'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#a09a90'; }}
+          >
+            <Package size={13} strokeWidth={2} /> Continue shopping
+          </Link>
         </div>
 
+        {/* ── Order summary ── */}
         {totals && (
-          <div className="w-64 shrink-0">
-            <div className="card p-5 space-y-3 sticky top-20">
-              <h2 className="font-semibold text-neutral-200">Order Summary</h2>
-              <div className="space-y-2 text-sm">
-                <Row label="Subtotal" value={`$${totals.subtotal.toLocaleString()}`} />
-                <Row label="Tax (8%)" value={`$${totals.tax.toFixed(2)}`} />
-                <Row label="Shipping" value={totals.shippingCost === 0 ? 'Free' : `$${totals.shippingCost}`} />
-                <div className="border-t border-neutral-700 pt-2">
-                  <Row label="Total" value={`$${totals.total.toLocaleString()}`} bold />
+          <div className="lg:w-72 shrink-0">
+            <div
+              className="rounded-2xl p-6 sticky top-24"
+              style={{ background: '#ffffff', border: '1px solid #ede9e1', boxShadow: '0 4px 24px rgba(0,0,0,0.05)' }}
+            >
+              {/* Title */}
+              <div className="flex items-center gap-2 mb-5">
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center"
+                  style={{ background: '#c9a84c12', border: '1px solid #c9a84c25' }}
+                >
+                  <ShoppingBag size={13} strokeWidth={1.8} style={{ color: '#c9a84c' }} />
                 </div>
+                <h2 className="text-[0.82rem] font-bold" style={{ color: '#1a1714' }}>Order Summary</h2>
               </div>
-              <Link href="/checkout" className="btn-primary block text-center w-full mt-4 py-2.5">
-                Proceed to Checkout
+
+              {/* Rows */}
+              <div className="space-y-3 mb-5">
+                <SummaryRow label="Subtotal" value={`$${totals.subtotal.toLocaleString()}`} />
+                <SummaryRow label="Tax (8%)" value={`$${totals.tax.toFixed(2)}`} />
+                <SummaryRow
+                  label="Shipping"
+                  value={totals.shippingCost === 0 ? 'Free' : `$${totals.shippingCost}`}
+                  accent={totals.shippingCost === 0}
+                />
+                <div className="h-px" style={{ background: '#ede9e1' }} />
+                <SummaryRow label="Total" value={`$${totals.total.toLocaleString()}`} bold />
+              </div>
+
+              {/* CTA */}
+              <Link
+                href="/checkout"
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-[0.78rem] font-bold tracking-wide transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{ background: '#1a1714', color: '#f5f0e8' }}
+              >
+                Proceed to Checkout <ArrowRight size={14} strokeWidth={2.5} />
               </Link>
+
+              {/* Trust note */}
+              <p className="text-center text-[0.62rem] mt-3" style={{ color: '#c4bdb2' }}>
+                🔒 Secure checkout · Free returns
+              </p>
             </div>
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <div className={`flex justify-between ${bold ? 'font-bold text-white text-base' : 'text-neutral-400'}`}>
-      <span>{label}</span>
-      <span>{value}</span>
     </div>
   );
 }
